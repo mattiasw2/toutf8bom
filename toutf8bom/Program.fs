@@ -16,5 +16,5 @@ let main argv =
     |> filterFilesByExtensions extensions
     |> Seq.iter convertToUtf8Bom
 
-    printfn "Conversion complete."
+    printfn "\nConversion complete."
     0 // Return success

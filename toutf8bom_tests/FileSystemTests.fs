@@ -86,3 +86,46 @@ let ``getAllFiles should skip directories starting with dot`` () =
     finally
         // Cleanup
         Directory.Delete(tempDir, true)
+
+[<Fact>]
+let ``getAllFiles should skip build and publish directories`` () =
+    // Create a temporary directory structure
+    let tempDir = Path.Combine(Path.GetTempPath(), "test_skip_build_dirs")
+    Directory.CreateDirectory(tempDir) |> ignore
+    
+    try
+        // Create normal directory with a file
+        let normalDir = Path.Combine(tempDir, "src")
+        Directory.CreateDirectory(normalDir) |> ignore
+        let normalFile = Path.Combine(normalDir, "test.txt")
+        File.WriteAllText(normalFile, "test") |> ignore
+        
+        // Create build directories with files
+        let objDir = Path.Combine(tempDir, "obj")
+        let binDir = Path.Combine(tempDir, "bin")
+        let publishDir = Path.Combine(tempDir, "publish")
+        
+        Directory.CreateDirectory(objDir) |> ignore
+        Directory.CreateDirectory(binDir) |> ignore
+        Directory.CreateDirectory(publishDir) |> ignore
+        
+        let objFile = Path.Combine(objDir, "debug.txt")
+        let binFile = Path.Combine(binDir, "app.exe")
+        let publishFile = Path.Combine(publishDir, "app.dll")
+        
+        File.WriteAllText(objFile, "test") |> ignore
+        File.WriteAllText(binFile, "test") |> ignore
+        File.WriteAllText(publishFile, "test") |> ignore
+        
+        // Get all files
+        let files = getAllFiles tempDir |> Seq.toList
+        
+        // Verify
+        Assert.Single(files)
+        Assert.Contains(normalFile, files)
+        Assert.DoesNotContain(objFile, files)
+        Assert.DoesNotContain(binFile, files)
+        Assert.DoesNotContain(publishFile, files)
+    finally
+        // Cleanup
+        Directory.Delete(tempDir, true)

@@ -4,14 +4,34 @@ open System
 open System.IO
 open System.Text // Add this to use Encoding
 
+/// List of directory names to skip during file scanning
+let private directoriesToSkip = 
+    [
+        // Build and output directories
+        "bin"
+        "obj"
+        "publish"
+        // Hidden directories (starting with dot)
+        ".git"
+        ".vs"
+        ".vscode"
+        ".idea"
+    ] |> Set.ofList
+
+/// Checks if a directory should be skipped
+let private shouldSkipDirectory (dirPath: string) =
+    let dirName = Path.GetFileName(dirPath)
+    dirName.StartsWith(".") || Set.contains dirName directoriesToSkip
+
 /// Recursively gets all files in a directory and its subdirectories
-/// Skips directories that start with a dot (.)
+/// Skips directories that:
+/// - Start with a dot (.)
+/// - Are build/output directories (bin, obj, publish)
 let rec getAllFiles (dir: string) =
     seq {
         yield! Directory.GetFiles(dir)
         for subDir in Directory.GetDirectories(dir) do
-            let dirName = Path.GetFileName(subDir)
-            if not (dirName.StartsWith(".")) then
+            if not (shouldSkipDirectory subDir) then
                 yield! getAllFiles subDir
     }
 
