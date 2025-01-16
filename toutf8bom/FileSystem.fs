@@ -4,6 +4,19 @@ open System
 open System.IO
 open System.Text // Add this to use Encoding
 
+/// Represents the access status of a file
+type FileAccessStatus = 
+    | Accessible of string
+    | Inaccessible of string * string // path * error message
+
+/// Checks if a file can be read and written
+let getFileAccessStatus (filePath: string) : FileAccessStatus =
+    try
+        use stream = File.Open(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read)
+        Accessible filePath
+    with 
+    | ex -> Inaccessible(filePath, ex.Message)
+
 /// List of directory names to skip during file scanning
 let private directoriesToSkip = 
     [
@@ -27,7 +40,11 @@ let private shouldSkipDirectory (dirPath: string) =
 /// Skips directories that:
 /// - Start with a dot (.)
 /// - Are build/output directories (bin, obj, publish)
-let rec getAllFiles (dir: string) =
+/// Throws ArgumentException if path is not a directory
+let rec getAllFiles (dir: string) : seq<string> =
+    if not (Directory.Exists dir) then
+        raise (ArgumentException($"Path '{dir}' is not a directory or does not exist"))
+    
     seq {
         yield! Directory.GetFiles(dir)
         for subDir in Directory.GetDirectories(dir) do

@@ -129,3 +129,56 @@ let ``getAllFiles should skip build and publish directories`` () =
     finally
         // Cleanup
         Directory.Delete(tempDir, true)
+
+[<Fact>]
+let ``getAllFiles should throw when path is not a directory`` () =
+    // Create a temporary file
+    let tempFile = Path.GetTempFileName()
+    
+    try
+        // Verify that exception is thrown
+        let ex = Assert.Throws<ArgumentException>(fun () -> 
+            getAllFiles tempFile |> Seq.toList |> ignore
+        )
+        Assert.Contains("is not a directory", ex.Message)
+    finally
+        // Cleanup
+        File.Delete(tempFile)
+
+[<Fact>]
+let ``getAllFiles should handle locked files`` () =
+    // Create a temporary directory structure
+    let tempDir = Path.Combine(Path.GetTempPath(), "test_locked_files")
+    Directory.CreateDirectory(tempDir) |> ignore
+    
+    try
+        // Create a normal file
+        let normalFile = Path.Combine(tempDir, "normal.txt")
+        File.WriteAllText(normalFile, "test") |> ignore
+        
+        // Create a locked file
+        let lockedFile = Path.Combine(tempDir, "locked.txt")
+        File.WriteAllText(lockedFile, "test") |> ignore
+        use stream = File.Open(lockedFile, FileMode.Open, FileAccess.ReadWrite, FileShare.None)
+        
+        // Get all files and their access status
+        let files = getAllFiles tempDir |> Seq.toList
+        
+        // Verify
+        Assert.Contains(normalFile, files)
+        Assert.Contains(lockedFile, files)
+        
+        // Try to get access status
+        let accessResults = files |> List.map getFileAccessStatus
+        Assert.Contains(FileAccessStatus.Accessible normalFile, accessResults)
+        let lockedStatus = accessResults |> List.find (function 
+            | FileAccessStatus.Inaccessible(path, _) -> path = lockedFile
+            | _ -> false)
+        match lockedStatus with
+        | FileAccessStatus.Inaccessible(_, error) ->
+            Assert.Contains("locked", error)
+        | _ -> Assert.True(false, "Expected locked file to be inaccessible")
+        
+    finally
+        // Cleanup
+        Directory.Delete(tempDir, true)
