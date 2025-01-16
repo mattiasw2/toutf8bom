@@ -1,0 +1,58 @@
+﻿module FileSystemTests
+
+open Xunit
+open FileSystem
+open System.IO
+open System
+
+[<Fact>]
+let ``getAllFiles should return all files in directory`` () =
+    // Create a temporary directory
+    let tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))
+    Directory.CreateDirectory(tempDir) |> ignore
+
+    try
+        // Create some test files
+        let file1 = Path.Combine(tempDir, "test1.fs")
+        let file2 = Path.Combine(tempDir, "test2.cs")
+        File.WriteAllText(file1, "test content")
+        File.WriteAllText(file2, "test content")
+
+        // Get all files in the directory
+        let files = getAllFiles tempDir |> Seq.toList
+
+        // Verify the results
+        Assert.Equal(2, files.Length)
+        Assert.Contains(file1, files)
+        Assert.Contains(file2, files)
+    finally
+        // Clean up the temporary directory
+        Directory.Delete(tempDir, recursive = true)
+
+[<Fact>]
+let ``filterFilesByExtensions should filter files by extensions`` () =
+    // Create a temporary directory
+    let tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"))
+    Directory.CreateDirectory(tempDir) |> ignore
+
+    try
+        // Create some test files
+        let file1 = Path.Combine(tempDir, "test1.fs")
+        let file2 = Path.Combine(tempDir, "test2.cs")
+        let file3 = Path.Combine(tempDir, "test3.txt")
+        File.WriteAllText(file1, "test content")
+        File.WriteAllText(file2, "test content")
+        File.WriteAllText(file3, "test content")
+
+        // Filter files by extensions
+        let files = getAllFiles tempDir
+        let filtered = filterFilesByExtensions [ ".fs"; ".cs" ] files |> Seq.toList
+
+        // Verify the results
+        Assert.Equal(2, filtered.Length)
+        Assert.Contains(file1, filtered)
+        Assert.Contains(file2, filtered)
+        Assert.DoesNotContain(file3, filtered)
+    finally
+        // Clean up the temporary directory
+        Directory.Delete(tempDir, recursive = true)
