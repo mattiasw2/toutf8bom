@@ -1,4 +1,4 @@
-﻿module FileSystemTests
+module FileSystemTests
 
 open Xunit
 open FileSystem
@@ -15,8 +15,8 @@ let ``getAllFiles should return all files in directory`` () =
         // Create some test files
         let file1 = Path.Combine(tempDir, "test1.fs")
         let file2 = Path.Combine(tempDir, "test2.cs")
-        File.WriteAllText(file1, "test content")
-        File.WriteAllText(file2, "test content")
+        File.WriteAllText(file1, "test content") |> ignore
+        File.WriteAllText(file2, "test content") |> ignore
 
         // Get all files in the directory
         let files = getAllFiles tempDir |> Seq.toList
@@ -40,9 +40,9 @@ let ``filterFilesByExtensions should filter files by extensions`` () =
         let file1 = Path.Combine(tempDir, "test1.fs")
         let file2 = Path.Combine(tempDir, "test2.cs")
         let file3 = Path.Combine(tempDir, "test3.txt")
-        File.WriteAllText(file1, "test content")
-        File.WriteAllText(file2, "test content")
-        File.WriteAllText(file3, "test content")
+        File.WriteAllText(file1, "test content") |> ignore
+        File.WriteAllText(file2, "test content") |> ignore
+        File.WriteAllText(file3, "test content") |> ignore
 
         // Filter files by extensions
         let files = getAllFiles tempDir
@@ -56,3 +56,33 @@ let ``filterFilesByExtensions should filter files by extensions`` () =
     finally
         // Clean up the temporary directory
         Directory.Delete(tempDir, recursive = true)
+
+[<Fact>]
+let ``getAllFiles should skip directories starting with dot`` () =
+    // Create a temporary directory structure
+    let tempDir = Path.Combine(Path.GetTempPath(), "test_skip_dot_dirs")
+    Directory.CreateDirectory(tempDir) |> ignore
+    
+    try
+        // Create normal directory with a file
+        let normalDir = Path.Combine(tempDir, "normal")
+        Directory.CreateDirectory(normalDir) |> ignore
+        let normalFile = Path.Combine(normalDir, "test.txt")
+        File.WriteAllText(normalFile, "test") |> ignore
+        
+        // Create .git directory with a file
+        let dotDir = Path.Combine(tempDir, ".git")
+        Directory.CreateDirectory(dotDir) |> ignore
+        let dotFile = Path.Combine(dotDir, "config")
+        File.WriteAllText(dotFile, "test") |> ignore
+        
+        // Get all files
+        let files = getAllFiles tempDir |> Seq.toList
+        
+        // Verify
+        Assert.Single(files)
+        Assert.Contains(normalFile, files)
+        Assert.DoesNotContain(dotFile, files)
+    finally
+        // Cleanup
+        Directory.Delete(tempDir, true)
